@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { useAccount } from "wagmi";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useStreaming } from "./useStreaming";
 
 interface BeatsContextType {
   beatsBalance: number;
@@ -14,6 +15,12 @@ interface BeatsContextType {
   isOutOfBeats: boolean;
   isLoading: boolean;
   isWalletConnected: boolean;
+  // Streaming
+  isStreaming: boolean;
+  beatsStreamed: number;
+  startStreaming: (trackId: string) => Promise<void>;
+  stopStreaming: () => Promise<void>;
+  streamingError: string | null;
 }
 
 const LOW_BEATS_WARNING = 400;
@@ -41,6 +48,16 @@ export function BeatsProvider({ children }: { children: ReactNode }) {
   const [beatsSpent, setBeatsSpent] = useState(0);
   const [initialized, setInitialized] = useState(false);
 
+  // Streaming hook
+  const {
+    isStreaming,
+    currentSession,
+    beatsStreamed,
+    startStreaming: startStreamingSession,
+    stopStreaming: stopStreamingSession,
+    error: streamingError,
+  } = useStreaming();
+
   // Read user's deposit from the smart contract
   const { data: userDeposit, isLoading: isLoadingDeposit, refetch } = useScaffoldReadContract({
     contractName: "BeatStreamVault",
@@ -65,14 +82,16 @@ export function BeatsProvider({ children }: { children: ReactNode }) {
     if (isConnected && userDeposit !== undefined && initialized) {
       // Convert USDC deposit to beats: deposit / USDC_PER_BEAT
       const contractBeats = Number(userDeposit) / USDC_PER_BEAT;
-      const remaining = Math.max(0, contractBeats - beatsSpent);
+      // Subtract both stored spent beats AND currently streaming beats
+      const totalSpent = beatsSpent + beatsStreamed;
+      const remaining = Math.max(0, contractBeats - totalSpent);
       setBeatsBalance(remaining);
-      console.log(`✅ Beats: ${contractBeats} deposited - ${beatsSpent} spent = ${remaining} remaining`);
+      console.log(`✅ Beats: ${contractBeats} deposited - ${beatsSpent} spent - ${beatsStreamed} streaming = ${remaining} remaining`);
     } else if (!isConnected) {
       // Demo mode when no wallet connected
       setBeatsBalance(INITIAL_BEATS);
     }
-  }, [isConnected, userDeposit, beatsSpent, initialized]);
+  }, [isConnected, userDeposit, beatsSpent, beatsStreamed, initialized]);
 
   const isLowOnBeats = beatsBalance < LOW_BEATS_WARNING && beatsBalance > 0;
   const isOutOfBeats = beatsBalance <= 0;
@@ -107,6 +126,27 @@ export function BeatsProvider({ children }: { children: ReactNode }) {
     refetch();
   }, [refetch]);
 
+  // Start streaming wrapper
+  const startStreaming = useCallback(async (trackId: string) => {
+    await startStreamingSession(trackId);
+  }, [startStreamingSession]);
+
+  // Stop streaming wrapper - updates spent beats on settlement
+  const stopStreaming = useCallback(async () => {
+    if (address && currentSession) {
+      const beatsToSettle = beatsStreamed;
+      await stopStreamingSession();
+      
+      // Update spent counter after settlement
+      const newSpent = beatsSpent + beatsToSettle;
+      setBeatsSpent(newSpent);
+      setSpentBeats(address, newSpent);
+      
+      // Refresh from contract to get updated deposit
+      refetch();
+    }
+  }, [address, currentSession, beatsStreamed, beatsSpent, stopStreamingSession, refetch]);
+
   return (
     <BeatsContext.Provider
       value={{
@@ -119,6 +159,12 @@ export function BeatsProvider({ children }: { children: ReactNode }) {
         isOutOfBeats,
         isLoading: isLoadingDeposit || !initialized,
         isWalletConnected: isConnected,
+        // Streaming
+        isStreaming,
+        beatsStreamed,
+        startStreaming,
+        stopStreaming,
+        streamingError,
       }}
     >
       {children}

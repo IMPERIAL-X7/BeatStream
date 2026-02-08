@@ -222,3 +222,60 @@ export async function uploadTrackAudio(
   }
   return res.json();
 }
+
+// ═══════════════════════════════════════════════
+// STREAMING SESSION APIs
+// ═══════════════════════════════════════════════
+
+export interface Session {
+  session_id: string;
+  user_wallet: string;
+  artist_id: string;
+  track_id: string;
+  start_time: string;
+  total_beats_paid: number;
+  status: "OPEN" | "SETTLED" | "DISPUTED";
+}
+
+/**
+ * Start a streaming session
+ */
+export async function startSession(
+  wallet: string,
+  trackId: string,
+  signature: string,
+  nonce: number
+): Promise<Session> {
+  const res = await fetch(`${API_BASE_URL}/api/sessions/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ wallet, trackId, signature, nonce }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Failed to start session");
+  }
+  const data = await res.json();
+  return data.session;
+}
+
+/**
+ * Settle a streaming session (transfer beats to artist)
+ */
+export async function settleSession(
+  sessionId: string,
+  wallet: string,
+  signature: string,
+  nonce: number
+): Promise<{ session: Session; settlement: any }> {
+  const res = await fetch(`${API_BASE_URL}/api/sessions/settle`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId, wallet, signature, nonce }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Failed to settle session");
+  }
+  return res.json();
+}

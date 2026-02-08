@@ -23,9 +23,12 @@ interface PlayerBarProps {
   beatsBalance: number;
   isLowOnBeats: boolean;
   isOutOfBeats: boolean;
+  isStreaming: boolean;
+  beatsStreamed: number;
   onPlayPause: () => void;
   onNext: () => void;
   onPrevious: () => void;
+  onSettle?: () => void;
 }
 
 export function PlayerBar({
@@ -35,9 +38,12 @@ export function PlayerBar({
   beatsBalance,
   isLowOnBeats,
   isOutOfBeats,
+  isStreaming,
+  beatsStreamed,
   onPlayPause,
   onNext,
   onPrevious,
+  onSettle,
 }: PlayerBarProps) {
   const progress = currentTrack ? (currentTime / currentTrack.duration) * 100 : 0;
 
@@ -158,8 +164,21 @@ export function PlayerBar({
           }`}>
             {beatsBalance.toLocaleString()} 🎵
           </div>
+          {isStreaming && beatsStreamed > 0 && (
+            <div className="text-xs text-info">
+              Streaming: {beatsStreamed} beats
+            </div>
+          )}
           {isOutOfBeats && (
             <div className="text-xs text-error">Top up to continue</div>
+          )}
+          {isStreaming && onSettle && (
+            <button 
+              onClick={onSettle}
+              className="btn btn-xs btn-primary mt-1"
+            >
+              Stop & Settle
+            </button>
           )}
         </div>
       </div>

@@ -69,7 +69,16 @@ export default function BeatStreamPage() {
   const [audioEnded, setAudioEnded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const { beatsBalance, decrementBeat, isLowOnBeats, isOutOfBeats } = useBeats();
+  const { 
+    beatsBalance, 
+    decrementBeat, 
+    isLowOnBeats, 
+    isOutOfBeats,
+    isStreaming,
+    beatsStreamed,
+    startStreaming,
+    stopStreaming,
+  } = useBeats();
 
   // Initialize audio element
   useEffect(() => {
@@ -186,17 +195,33 @@ export default function BeatStreamPage() {
     };
   }, [isPlaying, currentTrack, beatsBalance, decrementBeat]);
 
-  const handlePlayPause = useCallback(() => {
+  const handlePlayPause = useCallback(async () => {
     // Don't allow playing if out of beats
     if (beatsBalance <= 0) return;
     
     if (!currentTrack && artistTracks.length > 0) {
-      setCurrentTrack(artistTracks[0]);
+      const track = artistTracks[0];
+      setCurrentTrack(track);
       setIsPlaying(true);
+      // Start streaming session
+      if (track.id) {
+        await startStreaming(track.id);
+      }
+    } else if (isPlaying) {
+      // Stopping - settle the session
+      setIsPlaying(false);
+      if (audioRef.current) audioRef.current.pause();
+      if (isStreaming) {
+        await stopStreaming();
+      }
     } else {
-      setIsPlaying(prev => !prev);
+      // Resuming - start new session
+      setIsPlaying(true);
+      if (currentTrack?.id) {
+        await startStreaming(currentTrack.id);
+      }
     }
-  }, [currentTrack, artistTracks, beatsBalance]);
+  }, [currentTrack, artistTracks, beatsBalance, isPlaying, isStreaming, startStreaming, stopStreaming]);
 
   const handleNext = useCallback(() => {
     if (!currentTrack || allTracks.length === 0) return;
@@ -224,11 +249,22 @@ export default function BeatStreamPage() {
     if (prevArtist) setSelectedArtist(prevArtist);
   }, [currentTrack, allTracks, artists]);
 
-  const handleTrackSelect = (track: DisplayTrack) => {
+  const handleTrackSelect = async (track: DisplayTrack) => {
     if (beatsBalance <= 0) return; // Don't play if out of beats
+    
+    // If currently streaming a different track, settle first
+    if (isStreaming) {
+      await stopStreaming();
+    }
+    
     setCurrentTrack(track);
     setCurrentTime(0);
     setIsPlaying(true);
+    
+    // Start new streaming session
+    if (track.id) {
+      await startStreaming(track.id);
+    }
   };
 
   const handleArtistSelect = (artist: DisplayArtist) => {
@@ -376,9 +412,18 @@ export default function BeatStreamPage() {
         beatsBalance={beatsBalance}
         isLowOnBeats={isLowOnBeats}
         isOutOfBeats={isOutOfBeats}
+        isStreaming={isStreaming}
+        beatsStreamed={beatsStreamed}
         onPlayPause={handlePlayPause}
         onNext={handleNext}
         onPrevious={handlePrevious}
+        onSettle={async () => {
+          await stopStreaming();
+          setIsPlaying(false);
+          if (audioRef.current) {
+            audioRef.current.pause();
+          }
+        }}
       />
     </div>
   );
