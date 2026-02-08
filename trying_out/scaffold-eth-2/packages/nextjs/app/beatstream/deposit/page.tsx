@@ -88,11 +88,8 @@ export default function DepositPage() {
         functionName: "deposit",
         args: [parsedAmount],
       });
-      // Add beats to the shared context
-      if (beatsPerUsdc) {
-        const beatsToAdd = Number((parsedAmount * beatsPerUsdc) / BigInt(1e6));
-        addBeats(beatsToAdd);
-      }
+      // Reset spent counter and refetch balance from contract
+      addBeats(0);
       setAmount("");
     } catch (err) {
       console.error("Deposit failed:", err);
