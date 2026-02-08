@@ -62,10 +62,12 @@ export function initArc(): void {
   circleWalletId = process.env.CIRCLE_WALLET_ID ?? null;
   circleWalletAddress = process.env.CIRCLE_WALLET_ADDRESS ?? null;
   vaultContractId = process.env.CIRCLE_VAULT_CONTRACT_ID ?? null;
+  vaultContractAddress = process.env.CIRCLE_VAULT_CONTRACT_ADDRESS ?? null;
 
   console.log("✅ Circle Arc initialized");
   console.log(`   Wallet ID: ${circleWalletId ?? "(not set)"}`);
   console.log(`   Vault Contract ID: ${vaultContractId ?? "(not set)"}`);
+  console.log(`   Vault Address: ${vaultContractAddress ?? "(not set — will resolve from contract ID)"}`);
 }
 
 // ══════════════════════════════════════════════
