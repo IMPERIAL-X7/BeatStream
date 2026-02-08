@@ -40,10 +40,11 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Check if already registered as artist
+    // Check if already registered as artist — return existing (idempotent)
     const existing = await getArtistByWallet(wallet);
     if (existing) {
-      res.status(409).json({ error: "Already registered as artist", artist: existing });
+      console.log(`🎵 Artist login (already registered): ${existing.display_name} → ${existing.ens_name}`);
+      res.status(200).json({ artist: existing, ensName: existing.ens_name, existing: true });
       return;
     }
 

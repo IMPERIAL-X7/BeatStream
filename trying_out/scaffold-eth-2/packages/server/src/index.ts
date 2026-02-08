@@ -16,6 +16,7 @@ import { initArc } from "./services/arc.js";
 import { initENS } from "./services/ens.js";
 
 // Routes
+import authRoutes from "./routes/auth.js";
 import artistRoutes from "./routes/artists.js";
 import userRoutes from "./routes/users.js";
 import depositRoutes from "./routes/deposit.js";
@@ -53,6 +54,7 @@ app.get("/api/health", (_req: express.Request, res: express.Response) => {
 
 // ── API Routes ────────────────────────────────
 
+app.use("/api/auth", authRoutes);
 app.use("/api/artists", artistRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/deposit", depositRoutes);

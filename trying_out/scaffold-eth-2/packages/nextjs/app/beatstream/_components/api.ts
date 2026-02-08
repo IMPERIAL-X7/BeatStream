@@ -87,6 +87,38 @@ export async function checkHealth(): Promise<boolean> {
   }
 }
 
+// ═══════════════════════════════════════════════
+// AUTH — wallet connect login
+// ═══════════════════════════════════════════════
+
+export interface LoginResponse {
+  user: User;
+  artist: Artist | null;
+  role: "user" | "artist";
+  ensName: string | null;
+}
+
+/**
+ * Login with wallet — auto-creates user, detects artist.
+ * Call this on every wallet connect / page refresh.
+ */
+export async function login(
+  wallet: string,
+  signature: string,
+  nonce: number
+): Promise<LoginResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ wallet, signature, nonce }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Login failed");
+  }
+  return res.json();
+}
+
 // Format duration helper
 export function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -113,7 +145,7 @@ export async function fetchArtistByWallet(wallet: string): Promise<Artist | null
   return data.artist || null;
 }
 
-// Register as an artist
+// Register as an artist (idempotent — returns existing if already registered)
 export async function registerArtist(
   wallet: string,
   displayName: string,
@@ -121,7 +153,7 @@ export async function registerArtist(
   nonce: number,
   bio?: string,
   genre?: string
-): Promise<{ artist: Artist; ensName: string }> {
+): Promise<{ artist: Artist; ensName: string; existing?: boolean }> {
   const res = await fetch(`${API_BASE_URL}/api/artists/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
