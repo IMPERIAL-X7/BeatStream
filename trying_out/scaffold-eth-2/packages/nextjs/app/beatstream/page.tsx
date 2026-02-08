@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PlayerBar } from "./_components/PlayerBar";
+import { BeatStreamNav } from "./_components/BeatStreamNav";
+import { useBeats } from "./_components/BeatsContext";
 import { 
   fetchArtists, 
   fetchTracks, 
@@ -51,23 +53,18 @@ function toDisplayTrack(track: Track, artists: Artist[]): DisplayTrack {
   };
 }
 
-const INITIAL_BEATS = 5000;
-const LOW_BEATS_WARNING = 1000;
-
 export default function BeatStreamPage() {
   const [artists, setArtists] = useState<DisplayArtist[]>(mockArtists);
   const [allTracks, setAllTracks] = useState<DisplayTrack[]>(mockTracks);
-  const [selectedArtist, setSelectedArtist] = useState<DisplayArtist | null>(null);
+  const [selectedArtist, setSelectedArtist] = useState<DisplayArtist | null>(mockArtists[0]);
   const [currentTrack, setCurrentTrack] = useState<DisplayTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [beatsBalance, setBeatsBalance] = useState(INITIAL_BEATS);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingApi, setIsLoadingApi] = useState(true);
   const [useApi, setUseApi] = useState(false);
   const shouldAutoAdvance = useRef(false);
 
-  const isLowOnBeats = beatsBalance < LOW_BEATS_WARNING && beatsBalance > 0;
-  const isOutOfBeats = beatsBalance <= 0;
+  const { beatsBalance, decrementBeat, isLowOnBeats, isOutOfBeats } = useBeats();
 
   // Fetch data from API on mount
   useEffect(() => {
@@ -209,6 +206,13 @@ export default function BeatStreamPage() {
 
   return (
     <div className="flex flex-col h-screen pb-24">
+      {/* Top Navigation Bar */}
+      <BeatStreamNav 
+        beatsBalance={beatsBalance} 
+        isLowOnBeats={isLowOnBeats} 
+        isOutOfBeats={isOutOfBeats} 
+      />
+
       {/* Low Beats Warning Banner */}
       {isLowOnBeats && (
         <div className="bg-warning text-warning-content px-4 py-2 text-center text-sm font-medium">
@@ -227,9 +231,6 @@ export default function BeatStreamPage() {
       {/* Left Sidebar - Artists */}
       <aside className="w-64 bg-base-200 border-r border-base-content/10 overflow-y-auto">
         <div className="p-4">
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-            🎵 BeatStream
-          </h2>
           <h3 className="text-sm font-semibold text-base-content/60 uppercase tracking-wider mb-3">
             Artists {useApi && <span className="text-xs text-success">(Live)</span>}
           </h3>
