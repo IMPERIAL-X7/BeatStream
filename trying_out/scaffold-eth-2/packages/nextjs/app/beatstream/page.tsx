@@ -30,6 +30,7 @@ interface DisplayTrack {
   artistName: string;
   duration: number;
   coverUrl: string;
+  audioUrl?: string;
 }
 
 function toDisplayArtist(artist: Artist): DisplayArtist {
@@ -43,6 +44,8 @@ function toDisplayArtist(artist: Artist): DisplayArtist {
 
 function toDisplayTrack(track: Track, artists: Artist[]): DisplayTrack {
   const artist = artists.find(a => a.id === track.artist_id);
+  // Handle both API (audio_url) and mock data (audioUrl) naming
+  const anyTrack = track as unknown as { audio_url?: string; audioUrl?: string };
   return {
     id: track.id,
     title: track.title,
@@ -50,6 +53,7 @@ function toDisplayTrack(track: Track, artists: Artist[]): DisplayTrack {
     artistName: artist?.display_name || "Unknown Artist",
     duration: track.duration_seconds,
     coverUrl: track.cover_url || "🎵",
+    audioUrl: anyTrack.audio_url || anyTrack.audioUrl,
   };
 }
 
@@ -62,9 +66,55 @@ export default function BeatStreamPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [isLoadingApi, setIsLoadingApi] = useState(true);
   const [useApi, setUseApi] = useState(false);
-  const shouldAutoAdvance = useRef(false);
+  const [audioEnded, setAudioEnded] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const { beatsBalance, decrementBeat, isLowOnBeats, isOutOfBeats } = useBeats();
+
+  // Initialize audio element
+  useEffect(() => {
+    audioRef.current = new Audio();
+    audioRef.current.volume = 0.7;
+    
+    // Handle audio time updates
+    const audio = audioRef.current;
+    const handleTimeUpdate = () => {
+      if (audio) {
+        setCurrentTime(Math.floor(audio.currentTime));
+      }
+    };
+    const handleEnded = () => {
+      setAudioEnded(true);
+      setCurrentTime(0);
+    };
+    
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+    
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+      audio.pause();
+    };
+  }, []);
+
+  // Sync audio with current track
+  useEffect(() => {
+    if (audioRef.current && currentTrack?.audioUrl) {
+      const audio = audioRef.current;
+      if (audio.src !== currentTrack.audioUrl) {
+        audio.src = currentTrack.audioUrl;
+        audio.load();
+      }
+      if (isPlaying) {
+        audio.play().catch(err => console.log('Audio play error:', err));
+      } else {
+        audio.pause();
+      }
+    } else if (audioRef.current) {
+      audioRef.current.pause();
+    }
+  }, [currentTrack, isPlaying]);
 
   // Fetch data from API on mount
   useEffect(() => {
@@ -102,10 +152,10 @@ export default function BeatStreamPage() {
     ? allTracks.filter(t => t.artistId === selectedArtist.id) 
     : [];
 
-  // Auto-advance to next track when needed
+  // Auto-advance to next track when audio ends
   useEffect(() => {
-    if (shouldAutoAdvance.current && currentTrack) {
-      shouldAutoAdvance.current = false;
+    if (audioEnded && currentTrack) {
+      setAudioEnded(false);
       const currentIndex = allTracks.findIndex(t => t.id === currentTrack.id);
       const nextTrack = allTracks[(currentIndex + 1) % allTracks.length];
       if (nextTrack) {
@@ -115,9 +165,9 @@ export default function BeatStreamPage() {
         if (nextArtist) setSelectedArtist(nextArtist);
       }
     }
-  }, [currentTime, currentTrack, allTracks, artists]);
+  }, [audioEnded, currentTrack, allTracks, artists]);
 
-  // Simulate playback timer - deducts 1 beat per second
+  // Beats timer - deducts 1 beat per second while playing
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
     
@@ -126,14 +176,8 @@ export default function BeatStreamPage() {
         const shouldStop = decrementBeat();
         if (shouldStop) {
           setIsPlaying(false);
+          if (audioRef.current) audioRef.current.pause();
         }
-        setCurrentTime(prev => {
-          if (prev >= currentTrack.duration) {
-            shouldAutoAdvance.current = true;
-            return prev;
-          }
-          return prev + 1;
-        });
       }, 1000);
     }
 

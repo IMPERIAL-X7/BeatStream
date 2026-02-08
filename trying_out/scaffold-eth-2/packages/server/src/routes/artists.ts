@@ -86,6 +86,24 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
 });
 
 /**
+ * GET /api/artists/wallet/:wallet
+ * Get artist by wallet address
+ */
+router.get("/wallet/:wallet", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const artist = await getArtistByWallet(req.params.wallet as string);
+    if (!artist) {
+      res.status(404).json({ error: "Artist not found" });
+      return;
+    }
+    res.json({ artist });
+  } catch (err) {
+    console.error("Get artist by wallet error:", err);
+    res.status(500).json({ error: "Failed to fetch artist" });
+  }
+});
+
+/**
  * GET /api/artists/:id
  */
 router.get("/:id", async (req: Request, res: Response): Promise<void> => {
