@@ -7,12 +7,15 @@ import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { BeatStreamNav } from "../_components/BeatStreamNav";
+import { useBeats } from "../_components/BeatsContext";
 
 export default function DepositPage() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState("");
   const [isApproving, setIsApproving] = useState(false);
   const [isDepositing, setIsDepositing] = useState(false);
+  
+  const { addBeats } = useBeats();
 
   // Get vault contract address for approval
   const { data: vaultInfo } = useDeployedContractInfo({ contractName: "BeatStreamVault" });
@@ -85,6 +88,11 @@ export default function DepositPage() {
         functionName: "deposit",
         args: [parsedAmount],
       });
+      // Add beats to the shared context
+      if (beatsPerUsdc) {
+        const beatsToAdd = Number((parsedAmount * beatsPerUsdc) / BigInt(1e6));
+        addBeats(beatsToAdd);
+      }
       setAmount("");
     } catch (err) {
       console.error("Deposit failed:", err);
@@ -112,7 +120,7 @@ export default function DepositPage() {
   if (!isConnected) {
     return (
       <div className="flex flex-col min-h-screen">
-        <BeatStreamNav beatsBalance={0} />
+        <BeatStreamNav />
         <div className="flex flex-col items-center justify-center flex-1 p-8">
           <h1 className="text-4xl font-bold mb-4">💰 Deposit USDC</h1>
           <p className="text-lg text-base-content/60 mb-8">Connect your wallet to deposit USDC and get Beats</p>
@@ -122,11 +130,9 @@ export default function DepositPage() {
     );
   }
 
-  const beatsBalanceNum = currentDeposit ? Number(currentDeposit) : 0;
-
   return (
     <div className="flex flex-col min-h-screen">
-      <BeatStreamNav beatsBalance={beatsBalanceNum} />
+      <BeatStreamNav />
       <div className="flex flex-col items-center flex-1 p-8">
       <div className="max-w-md w-full">
         <h1 className="text-4xl font-bold mb-2 text-center">💰 Deposit USDC</h1>

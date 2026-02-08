@@ -91,9 +91,8 @@ export default function BeatStreamPage() {
       } catch (err) {
         // Fallback to mock data if API fails
         console.log("ℹ️ Using mock data (API unavailable)");
-        setSelectedArtist(mockArtists[0]);
       } finally {
-        setIsLoading(false);
+        setIsLoadingApi(false);
       }
     }
     loadData();
@@ -124,14 +123,10 @@ export default function BeatStreamPage() {
     
     if (isPlaying && currentTrack && beatsBalance > 0) {
       interval = setInterval(() => {
-        setBeatsBalance(prev => {
-          if (prev <= 1) {
-            // Out of beats - stop playback
-            setIsPlaying(false);
-            return 0;
-          }
-          return prev - 1;
-        });
+        const shouldStop = decrementBeat();
+        if (shouldStop) {
+          setIsPlaying(false);
+        }
         setCurrentTime(prev => {
           if (prev >= currentTrack.duration) {
             shouldAutoAdvance.current = true;
@@ -145,7 +140,7 @@ export default function BeatStreamPage() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isPlaying, currentTrack, beatsBalance]);
+  }, [isPlaying, currentTrack, beatsBalance, decrementBeat]);
 
   const handlePlayPause = useCallback(() => {
     // Don't allow playing if out of beats
@@ -196,22 +191,10 @@ export default function BeatStreamPage() {
     setSelectedArtist(artist);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-xl">Loading BeatStream...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col h-screen pb-24">
       {/* Top Navigation Bar */}
-      <BeatStreamNav 
-        beatsBalance={beatsBalance} 
-        isLowOnBeats={isLowOnBeats} 
-        isOutOfBeats={isOutOfBeats} 
-      />
+      <BeatStreamNav />
 
       {/* Low Beats Warning Banner */}
       {isLowOnBeats && (

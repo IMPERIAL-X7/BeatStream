@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 interface BeatsContextType {
   beatsBalance: number;
   setBeatsBalance: (balance: number) => void;
-  decrementBeat: () => boolean; // Returns false if out of beats
+  decrementBeat: () => boolean; // Returns true if playback should stop (out of beats)
   addBeats: (amount: number) => void;
   isLowOnBeats: boolean;
   isOutOfBeats: boolean;
@@ -25,9 +25,12 @@ export function BeatsProvider({ children }: { children: ReactNode }) {
   const isOutOfBeats = beatsBalance <= 0;
 
   const decrementBeat = useCallback(() => {
-    if (beatsBalance <= 0) return false;
-    setBeatsBalance(prev => Math.max(0, prev - 1));
-    return true;
+    if (beatsBalance <= 1) {
+      setBeatsBalance(0);
+      return true; // Should stop - out of beats
+    }
+    setBeatsBalance(prev => prev - 1);
+    return false; // Continue playing
   }, [beatsBalance]);
 
   const addBeats = useCallback((amount: number) => {
