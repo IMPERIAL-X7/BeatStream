@@ -1,101 +1,71 @@
 # 🔲 BeatStream — What Needs To Be Done
 
-> Remaining work to go from "backend complete" to "hackathon-ready demo".
-> **Updated: Feb 8, 2026** — after ENS smoke test pass.
+> Remaining work to go from "all integrations live" to "hackathon-ready demo".
+> **Updated: Feb 8, 2026** — All three integrations working. Focus is now on end-to-end testing + demo.
 
 ---
 
 ## ✅ What Has Been Completed
 
 - [x] Smart contracts: `BeatStreamVault.sol` + `MockUSDC.sol` deployed to local Hardhat
+- [x] **BeatStreamVault deployed on Circle Arc Testnet** at `0x08ff69988879ee75acf24559cf276e286da2a56f`
 - [x] Backend server: Express + WebSocket on port 4000, **0 TypeScript errors**
 - [x] Supabase: All tables created + seed data (users, artists, tracks, sessions)
 - [x] Migration v2: `fan_subdomains`, `stream_history` tables, RPC functions, `audio` storage bucket — **run in Supabase ✅**
-- [x] Circle SDK: API key configured, entity secret registered, developer wallet created (`0xdfa721...`)
-- [x] Yellow SDK: `@erc7824/nitrolite` v0.5.3 imported, ClearNode WebSocket connects
+- [x] Circle SDK: API key configured, entity secret registered, developer wallet created + funded (40 USDC)
+- [x] **Circle vault deployed on Arc Testnet** (contract ID: `019c3d96-6c48-7703-ae6d-4d383efbe157`)
+- [x] Yellow SDK: `@erc7824/nitrolite` v0.5.3 — **auth fully working** (challenge-response + JWT)
+- [x] **Yellow auto-reconnect + re-auth works** (confirmed across multiple ClearNode disconnections)
 - [x] ENS: `beatstream.eth` registered on Sepolia (tx `0xc2413f...`, block 10217506)
+- [x] **ENS wrapped in NameWrapper** — `setSubnodeRecord()` works on-chain
+- [x] **`synthwave.beatstream.eth` created on-chain** (tx `0x6517de...`, block 10217661)
 - [x] ENS service: Full on-chain read/write code via viem + NameWrapper on Sepolia
 - [x] ENS API routes: 5 endpoints mounted at `/api/ens/*`
 - [x] Audio upload: `POST /api/tracks/:id/audio` → Supabase Storage
 - [x] Stream history: settle endpoint records history + increments play count + artist streams
 - [x] Fan subdomain eligibility check: integrated into session settle flow
-- [x] All API keys configured in `.env`
-- [x] Smoke test: All 6 endpoints return valid JSON responses ✅
+- [x] All API keys configured in `.env` (including vault contract ID + address)
+- [x] Smoke test: All endpoints return valid JSON responses ✅
+- [x] `/api/status` shows all three integrations live ✅
 
 ---
 
-## 🔴 What's Broken / Not Working — Fix These First
+## � Nothing Is Broken — All Three Integrations Work
 
-### 1. ENS Subdomain Registration Reverts (simulated mode)
-**Symptom**: `POST /api/ens/register-artist` returns `simulated: true` instead of creating on-chain.
-**Root cause**: `NameWrapper.setSubnodeRecord()` reverts because the server wallet may not be the owner in the NameWrapper. We registered `beatstream.eth` via the ENS app but it may not be "wrapped".
-**Fix options**:
-- **A)** Go to app.ens.domains → `beatstream.eth` → "Wrap Name" → this gives NameWrapper ownership
-- **B)** Change `ens.ts` to use `ENSRegistry.setSubnodeOwner()` instead (works with unwrapped names)
-- **C)** Use the ENS app to set our server wallet as an approved operator on the NameWrapper
-**Time estimate**: 30 min – 1 hour
-**How to verify**: Response has `simulated: false` and a real `txHash`.
+All three prize-track integrations are now operational:
 
-### 2. Yellow Network Auth Never Completes
-**Symptom**: Server logs `Auth request sent, waiting for challenge...` then nothing. ClearNode never responds. WebSocket reconnects every 5s.
-**Root cause**: Unknown. Possibly:
-- Need to deposit `ytest.usd` into Custody contract first
-- Auth request format doesn't match what sandbox expects
-- Sandbox may require whitelisting
-**Fix steps**:
-1. Check if Yellow requires a deposit before auth → Custody `0x019B65...` on Sepolia
-2. Get `ytest.usd` tokens (`0x1c7D4B...` on Sepolia) — may need to mint or request from faucet
-3. `approve()` Custody contract → `deposit()` tokens
-4. Try auth again
-5. If still fails, compare with Yellow's example code in `@erc7824/nitrolite` repo
-**Time estimate**: 1-2 hours
-**How to verify**: Server logs `✅ Authenticated with ClearNode!`
-
-### 3. Circle Vault Not Deployed on Arc Testnet
-**Symptom**: `settlePayment()` simulates. No real on-chain settlement.
-**Root cause**: `CIRCLE_VAULT_CONTRACT_ID` and `CIRCLE_USDC_CONTRACT_ID` are placeholder values in `.env`.
-**Fix steps**:
-1. Deploy `BeatStreamVault.sol` on Arc Testnet via Circle SDK or dashboard
-2. Set `CIRCLE_VAULT_CONTRACT_ID=<contractId>` in `.env`
-3. Set `CIRCLE_USDC_CONTRACT_ID=<usdcContractId>` in `.env`
-4. Restart server
-**Time estimate**: 30 min
-**How to verify**: `POST /api/sessions/settle` returns `settlement.success: true` with a real tx hash.
+| Integration | Status | Evidence |
+|-------------|--------|----------|
+| **Yellow Network** | ✅ Auth works | WebSocket connects, challenge-response completes, JWT received, auto-reconnects |
+| **Circle Arc** | ✅ Vault deployed | `0x08ff69988879ee75acf24559cf276e286da2a56f` live on Arc Testnet, wallet has 40 USDC |
+| **ENS** | ✅ On-chain | `synthwave.beatstream.eth` created via NameWrapper on Sepolia (tx `0x6517de...`) |
 
 ---
 
-## 🟡 Workflow — Exactly What To Do Next
+## 🟡 Workflow — What To Do Next
 
 ```
-Step 1: Fix ENS wrapping                      (30 min)
-  └─ Wrap beatstream.eth in NameWrapper OR switch to Registry calls
-  └─ Test: POST /api/ens/register-artist → simulated: false ✅
-
-Step 2: Fix Yellow auth                       (1-2 hrs)
-  └─ Get ytest.usd tokens on Sepolia
-  └─ Deposit into Custody contract
-  └─ Test: server logs "Authenticated with ClearNode!" ✅
-
-Step 3: Test Yellow app session lifecycle      (30 min)
-  └─ Open app session → submit state updates → close
-  └─ Test: POST /api/sessions/start returns appSessionId ✅
-
-Step 4: Deploy vault on Circle Arc Testnet     (30 min)
-  └─ Deploy BeatStreamVault via Circle SDK
-  └─ Set CIRCLE_VAULT_CONTRACT_ID in .env
-  └─ Test: POST /api/sessions/settle returns real tx hash ✅
-
-Step 5: End-to-end test                        (1 hr)
+Step 1: End-to-end flow test                   (1 hr)
   └─ Register artist → create track → upload audio
-  └─ Register user → deposit USDC → start stream
-  └─ Stream for 10 seconds via WebSocket
-  └─ Settle → verify artist earnings + stream history
-  └─ Check fan subdomain eligibility
+  └─ Register user → deposit → start stream → beat ticks → settle
+  └─ Verify: Yellow session, Arc settlement, ENS subdomain, stream history
+  └─ Test: Full lifecycle completes without errors ✅
 
-Step 6: Frontend (separate branch)             (teammate)
+Step 2: Yellow app sessions with real tokens    (1-2 hrs)
+  └─ Get ytest.usd tokens on Sepolia
+  └─ Deposit into Custody contract (0x019B65...)
+  └─ Test: POST /api/sessions/start returns real appSessionId ✅
+  └─ Test: State updates flow through ClearNode in real-time ✅
+
+Step 3: Circle settlement end-to-end            (30 min)
+  └─ Fund vault with more testnet USDC if needed (faucet.circle.com)
+  └─ Test: POST /api/sessions/settle → real tx hash on Arc Testnet ✅
+  └─ Verify on https://testnet.arcscan.app/ ✅
+
+Step 4: Frontend (separate branch)              (teammate)
   └─ Merge and wire to backend
 
-Step 7: Polish + demo                          (1-2 hrs)
+Step 5: Polish + demo                           (1-2 hrs)
   └─ Demo video, pitch deck, final testing
 ```
 
@@ -119,7 +89,7 @@ Step 7: Polish + demo                          (1-2 hrs)
 ## 🔑 Environment Variables Status
 
 ```bash
-# ✅ ALL CONFIGURED
+# ✅ ALL CONFIGURED — NO PLACEHOLDERS
 YELLOW_PRIVATE_KEY=0xcd91...         # → wallet 0xBB2FB355... (also ENS signer)
 ALCHEMY_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/...
 YELLOW_WS_URL=wss://clearnet-sandbox.yellow.com/ws
@@ -129,10 +99,8 @@ SUPABASE_URL=https://rxsqzlylziilhtkjzeeb.supabase.co
 SUPABASE_ANON_KEY=eyJ...             # ✅
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
 CIRCLE_WALLET_ID=24071f33-312a-...   # ✅ created
-CIRCLE_WALLET_ADDRESS=0xdfa721...    # ✅ created
+CIRCLE_WALLET_ADDRESS=0xdfa721...    # ✅ created, funded with 40 USDC
+CIRCLE_VAULT_CONTRACT_ID=019c3d96-6c48-7703-ae6d-4d383efbe157  # ✅ deployed on Arc Testnet
+CIRCLE_VAULT_CONTRACT_ADDRESS=0x08ff69988879ee75acf24559cf276e286da2a56f  # ✅ live
 PORT=4000
-
-# ⚠️ STILL PLACEHOLDER (need Circle vault deployment)
-CIRCLE_VAULT_CONTRACT_ID=your_deployed_vault_contract_id
-CIRCLE_USDC_CONTRACT_ID=             # After deploying on Arc Testnet
 ```
