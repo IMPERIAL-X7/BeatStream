@@ -28,7 +28,7 @@ const ENS_CONTRACTS = {
   // ENS NameWrapper on Sepolia
   nameWrapper: "0x0635513f179D50A207757E05759CbD106d7dFcE8" as Address,
   // ENS Public Resolver on Sepolia
-  publicResolver: "0x8FADE66B79cC9f1C6F971901BaD5484eD3276E7e" as Address,
+  publicResolver: "0x8FAde66b79cC9F1C6f971901bad5484ED3276E7E" as Address,
   // ENS Registry on Sepolia
   registry: "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e" as Address,
 };

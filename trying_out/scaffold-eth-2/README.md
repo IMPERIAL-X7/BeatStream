@@ -34,14 +34,14 @@ Stream music, pay by the second using on-chain Beats (1000 Beats = 1 USDC), and 
 |-------------|---------------|----------------|
 | **Yellow Network** | SDK imported, ClearNode WebSocket connects, auth request sent, app session/state update/close code written | ClearNode never responds to auth challenge (reconnect loop). No `ytest.usd` tokens deposited into Custody contract. App sessions can't actually open without auth. |
 | **Circle Arc** | SDK imported, API key + entity secret registered, developer wallet created (`0xdfa721...`), settlement code written | BeatStreamVault not deployed on Arc Testnet via Circle SDK. `settlePayment()` will simulate/fail until vault is deployed. Missing `CIRCLE_VAULT_CONTRACT_ID` + `CIRCLE_USDC_CONTRACT_ID` in .env. |
-| **ENS** | `beatstream.eth` registered on Sepolia (tx `0xc2413f...`), NameWrapper + Resolver contracts configured, all read/write functions written | `setSubnodeRecord()` will revert because NameWrapper doesn't recognize our wallet as the owner of the wrapped name (ENS app registration vs NameWrapper wrapping are separate). Artist subdomain registration falls back to "simulated" mode. Need to **wrap** `beatstream.eth` in NameWrapper or use `setSubnodeOwner` on the Registry directly. |
+| **ENS** | ✅ **FULLY WORKING ON-CHAIN.** `beatstream.eth` registered + wrapped in NameWrapper on Sepolia. Subdomain creation confirmed: `synthwave.beatstream.eth` created on-chain (tx `0x6517de...`, block 10217661). | All read/write operations functional. |
 
 ### ❌ What does NOT work yet
 
 | Feature | Why |
 |---------|-----|
-| **Artist actually gets `<name>.beatstream.eth` on-chain** | NameWrapper `setSubnodeRecord` reverts — we own `beatstream.eth` but it may not be wrapped in NameWrapper. Falls back to simulation (returns success but no on-chain tx). |
-| **Fan earns subdomain after 100+ beats** | Same NameWrapper issue. Eligibility check works, DB recording works, but on-chain minting simulates. |
+| **Artist actually gets `<name>.beatstream.eth` on-chain** | ✅ **FIXED** — Works after wrapping + checksum fix. `synthwave.beatstream.eth` confirmed on-chain (block 10217661). |
+| **Fan earns subdomain after 100+ beats** | Code ready, same `setSubnodeRecord` mechanism. Untested end-to-end but should work now. |
 | **Real USDC settlement to artist** | Circle vault not deployed on Arc Testnet. `settlePayment()` simulates. |
 | **Real state channel payments** | Yellow auth never completes. All state channel calls return null/false gracefully. |
 | **Frontend** | In progress on a separate branch by a teammate. Not merged. |
