@@ -103,6 +103,7 @@ export async function initYellow(): Promise<void> {
     addresses: {
       custody: YELLOW_CONTRACTS.custody as Address,
       adjudicator: YELLOW_CONTRACTS.adjudicator as Address,
+      guestAddress: serverAccount.address as Address,
     },
     chainId: YELLOW_CHAIN_ID,
     challengeDuration: BigInt(3600),

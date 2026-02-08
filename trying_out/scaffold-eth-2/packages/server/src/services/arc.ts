@@ -11,11 +11,11 @@
 // ──────────────────────────────────────────────
 import {
   initiateSmartContractPlatformClient,
-  type SmartContractPlatformClient,
+  type CircleSmartContractPlatformClient,
 } from "@circle-fin/smart-contract-platform";
 import {
   initiateDeveloperControlledWalletsClient,
-  type DeveloperControlledWalletsClient,
+  type CircleDeveloperControlledWalletsClient,
 } from "@circle-fin/developer-controlled-wallets";
 import {
   ARC_TESTNET_CHAIN,
@@ -26,8 +26,8 @@ import {
 
 // ── Module state ──────────────────────────────
 
-let contractSdk: SmartContractPlatformClient | null = null;
-let walletSdk: DeveloperControlledWalletsClient | null = null;
+let contractSdk: CircleSmartContractPlatformClient | null = null;
+let walletSdk: CircleDeveloperControlledWalletsClient | null = null;
 
 let circleWalletId: string | null = null;
 let circleWalletAddress: string | null = null;
